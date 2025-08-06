@@ -6,12 +6,12 @@ import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 
-public interface Trajectory {
+public class Trajectory {
     public static class Sample {
-        public Time time;
-        public Pose2d pose;
-        public ChassisSpeeds speed;
-        public ChassisAccelerations accel;
+        public final Time time;
+        public final Pose2d pose;
+        public final ChassisSpeeds speed;
+        public final ChassisAccelerations accel;
 
         public Sample(Time time, Pose2d pose, ChassisSpeeds speed, ChassisAccelerations accel) {
             this.time = time;
@@ -19,14 +19,26 @@ public interface Trajectory {
             this.speed = speed;
             this.accel = accel;
         }
+
+        public Sample() {
+            this(Units.Seconds.of(0.0), new Pose2d(), new ChassisSpeeds(), new ChassisAccelerations());
+        }
     }
 
-    Time duration();
-    Distance length();
+    public Time duration() {
+        return Units.Seconds.of(-1.0);
+    }
+    public Distance length() {
+        return Units.Meters.of(-1.0);
+    }
 
-    Sample sampleAt(Time time);
-    Pose2d poseAt(Time time);
+    public Sample sampleAt(Time time) {
+        return new Sample();
+    }
+    public Pose2d poseAt(Time time) {
+        return new Pose2d();
+    }
 
-    default Sample start() { return sampleAt(Units.Seconds.of(0.0)); }
-    default Sample end() { return sampleAt(duration()); }
+    public Sample start() { return sampleAt(Units.Seconds.of(0.0)); }
+    public Sample end() { return sampleAt(duration()); }
 }

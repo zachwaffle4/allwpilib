@@ -98,14 +98,14 @@ Trajectory trajectory = TrajectoryBuilder.createWithConstraints(
 )
 .forward(distance)
 .turn(angle)
-.splineTo(waypoint1)
+.splineTo(waypoint1, tangent1)
 .build();
 ```
 
 By default, the trajectory will use tangential heading interpolation.
 
 Other heading interpolation styles can be used instead
-on `strafeTo` and `splineTo` methods:`
+on `lineTo` and `splineTo` methods:`
 - `linearHeading` linearly interpolates the heading
 - `splineHeading` interpolates the heading using a 1d spline
 - `constantHeading` uses the heading of the previous point
@@ -117,12 +117,20 @@ Trajectory trajectory = TrajectoryBuilder.createWithConstraints(
 )
 .forward(distance)
 .turn(angle)
-.splineTo(waypoint1)
-.splineToLinearHeading(waypoint2, heading1)
-.strafeToConstantHeading(waypoint3)
-.splineToSplineHeading(waypoint4, heading2)
+.splineTo(waypoint1, tangent1)
+.splineToLinearHeading(waypoint2, heading1, tangent2)
+.lineToConstantHeading(waypoint3)
+.splineToSplineHeading(waypoint4, heading2, tangent3)
 .build();
 ```
+
+The following paths will be supported:
+- `forward(Distance)` straight line in current direction
+- `turn(Angle)` turns desired angle
+- `turnTo(Rotation2d)`turns to reach desired heading
+- `splineTo(Translation2d, Rotation2d)` spline path to the waypoint with the given tangent
+- `lineTo(Translation2d)` straight line to given waypoint
+- `curveTo(Translation2d...)` Bézier curve path to the given waypoints
 
 ### Constraints
 

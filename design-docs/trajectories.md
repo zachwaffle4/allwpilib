@@ -66,6 +66,11 @@ public static class Sample {
 }
 ```
 
+A `DifferentialSample` class will be used to represent a sample
+for a differential drive robot, 
+which extends `Sample` and calculates the left and right wheel speeds
+given the chassis speeds and the drivetrain kinematics.
+
 ### Trajectory
 
 The `Trajectory` class represents a trajectory,
@@ -94,10 +99,11 @@ with a fluent interface.
 ```java
 Trajectory trajectory = TrajectoryBuilder.createWithConstraints(
     startPose,
-    constraints
+    velConstraint, 
+    accelConstraint
 )
 .forward(distance)
-.turn(angle)
+.turnBy(angle)
 .splineTo(waypoint1, tangent1)
 .build();
 ```
@@ -113,10 +119,11 @@ on `lineTo` and `splineTo` methods:`
 ```java
 Trajectory trajectory = TrajectoryBuilder.createWithConstraints(
     startPose,
-    constraints
+    velConstraint, 
+    accelConstraint
 )
 .forward(distance)
-.turn(angle)
+.turnBy(angle)
 .splineTo(waypoint1, tangent1)
 .splineToLinearHeading(waypoint2, heading1, tangent2)
 .lineToConstantHeading(waypoint3)
@@ -126,7 +133,7 @@ Trajectory trajectory = TrajectoryBuilder.createWithConstraints(
 
 The following paths will be supported:
 - `forward(Distance)` straight line in current direction
-- `turn(Angle)` turns desired angle
+- `turnBy(Angle)` turns desired angle
 - `turnTo(Rotation2d)`turns to reach desired heading
 - `splineTo(Translation2d, Rotation2d)` spline path to the waypoint with the given tangent
 - `lineTo(Translation2d)` straight line to given waypoint
@@ -134,8 +141,8 @@ The following paths will be supported:
 
 ### Constraints
 
-The `TrajectoryConstraints` class will be used to specify
-the maximum velocity and acceleration of the robot.
+The `VelocityConstraint` and `AccelerationConstraint` classes
+will be used to define the constraints of the trajectory.
 
 ## Implementation
 

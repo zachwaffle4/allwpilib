@@ -1,6 +1,7 @@
 package edu.wpi.first.math.curves;
 
 import edu.wpi.first.math.Num;
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.Vector;
 
 /**
@@ -9,11 +10,11 @@ import edu.wpi.first.math.Vector;
  * @param <N>
  */
 public interface CurveNd<N extends Num> {
-    int getDim();
+    int dim();
 
     /**
      * Gets the point at time t.
-     * @param t value between 0 and 1.
+     * @param t value within [0, 1].
      */
     Vector<N> getPoint(double t);
 }

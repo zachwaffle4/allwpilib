@@ -4,36 +4,25 @@
 
 package wpilib.robot;
 
-import org.wpilib.framework.TimedRobot;
+import org.wpilib.command3.Command;
+import org.wpilib.command3.CommandRobot;
+import org.wpilib.driverstation.DriverStation;
 
-public class Robot extends TimedRobot {
+public class Robot extends CommandRobot {
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
-  public Robot() {}
+  public Robot() {
+    autonomous("simple auto")
+            .enabled.whileTrue(simpleAutonomousCommand());
 
-  /** This function is run once each time the robot enters autonomous mode. */
-  @Override
-  public void autonomousInit() {}
+    DriverStation.publishOpModes();
+  }
 
-  /** This function is called periodically during autonomous. */
-  @Override
-  public void autonomousPeriodic() {}
-
-  /** This function is called once each time the robot enters tele-operated mode. */
-  @Override
-  public void teleopInit() {}
-
-  /** This function is called periodically during operator control. */
-  @Override
-  public void teleopPeriodic() {}
-
-  /** This function is called periodically during test mode. */
-  @Override
-  public void testPeriodic() {}
-
-  /** This function is called periodically during all modes. */
-  @Override
-  public void robotPeriodic() {}
+  public Command simpleAutonomousCommand() {
+    return Command.noRequirements().executing(co -> {
+      System.out.println("Autonomous!");
+    }).named("Simple Autonomous Command");
+  }
 }

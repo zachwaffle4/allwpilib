@@ -15,6 +15,8 @@ import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.opmode.OpMode;
 import org.wpilib.smartdashboard.SmartDashboard;
 import org.wpilib.system.Watchdog;
+import org.wpilib.system.RobotController;
+import org.wpilib.util.WPIUtilJNI;
 
 /**
  * An opmode structure for periodic operation built around the command scheduler.
@@ -48,6 +50,7 @@ public class CommandOpMode implements OpMode {
 
     private final ControlWord m_word = new ControlWord();
     private final Watchdog m_watchdog;
+    private final double m_period;
 
     private long m_opModeId;
     private final AtomicBoolean m_running = new AtomicBoolean(false);
@@ -80,7 +83,18 @@ public class CommandOpMode implements OpMode {
      *                  you will pass {@link Scheduler#getDefault()}.
      */
     public CommandOpMode(Scheduler scheduler) {
-        m_watchdog = new Watchdog(kPeriod, this::printLoopOverrunMessage);
+        this(scheduler, kPeriod);
+    }
+
+    /**
+     * Constructor that allows configuring the loop period.
+     *
+     * @param scheduler the Scheduler instance this opmode should drive.
+     * @param period loop period in seconds.
+     */
+    public CommandOpMode(Scheduler scheduler, double period) {
+        m_period = period;
+        m_watchdog = new Watchdog(m_period, this::printLoopOverrunMessage);
         m_scheduler = scheduler;
 
         selected = new Trigger(m_scheduler, () -> DriverStation.isOpMode(m_opModeId));
@@ -116,7 +130,24 @@ public class CommandOpMode implements OpMode {
         m_opModeId = opModeId;
         m_running.set(true);
 
+        final long periodMicros = (long) (m_period * 1e6);
+        long nextTime = RobotController.getFPGATime() + periodMicros;
+
         while (m_running.get()) {
+            // Schedule the notifier for the next loop time and wait for it.
+            NotifierJNI.setNotifierAlarm(m_notifier, nextTime, 0, true, true);
+
+            try {
+                WPIUtilJNI.waitForObject(m_notifier);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+
+            // Update nextTime for the following iteration (and catch up if we're behind).
+            long currentTime = RobotController.getFPGATime();
+
+            // Prepare DriverStation state and check for disable/selection changes.
             DriverStation.refreshData();
             DriverStation.refreshControlWordFromCache(m_word);
             m_word.setOpModeId(m_opModeId);
@@ -149,6 +180,14 @@ public class CommandOpMode implements OpMode {
             // Warn on loop time overruns
             if (m_watchdog.isExpired()) {
                 m_watchdog.printEpochs();
+            }
+
+            // Advance nextTime by one period; if we're behind, skip ahead to the next
+            // future multiple to avoid rapid-fire loops.
+            nextTime += periodMicros;
+            if (currentTime >= nextTime) {
+                long periodsBehind = (currentTime - nextTime) / periodMicros + 1;
+                nextTime += periodsBehind * periodMicros;
             }
         }
     }
@@ -184,6 +223,15 @@ public class CommandOpMode implements OpMode {
     }
 
     private void printLoopOverrunMessage() {
-        DriverStation.reportWarning("Loop time of " + kPeriod + "s overrun\n", false);
+        DriverStation.reportWarning("Loop time of " + m_period + "s overrun\n", false);
+    }
+
+    /**
+     * Gets the configured period for the loop in seconds.
+     *
+     * @return loop period in seconds.
+     */
+    public double getPeriod() {
+        return m_period;
     }
 }

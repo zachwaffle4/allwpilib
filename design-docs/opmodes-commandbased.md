@@ -192,4 +192,6 @@ An alternative to this proposal is to not use `OpModeRobot` as the base class fo
 
 The goal of that alternative is to separate command-based and non-command-based opmodes by design, though teams can still mix them in the same project by manually creating registration functions (probably by copying what `OpModeRobot` does). Less importantly, that design's version of the `CommandOpMode` class does not actually implement the `OpMode` interface, and the actual `OpMode` implementations are provided by another class. That design makes relatively little sense. Command-based opmodes should be opmodes, and as such they should be able to be used with the rest of the OpMode framework.
 
-The largest advantage of mixing command-based and non-command-based opmodes is it allows for rapid testing of mechanisms, as teams can make opmodes that
+The largest advantage of mixing command-based and non-command-based opmodes is it allows for rapid testing of mechanisms, as teams can make opmodes that test specific behavior without having to write a full subsystem with commands for the mechanism, and then switch to the full subsystem when the mechanism is ready for use. 
+
+Since this proposal only runs the command scheduler when a `CommandOpMode` is selected on the Driver Station, it does not interfere with the behavior of `LinearOpMode` or `PeriodicOpMode` opmodes, so it is okay that this proposal allows command-based and traditional opmodes to be mixed in the same project.

@@ -28,7 +28,6 @@ Relevant library classes:
 - `Context` is described above.  Although it contains a boolean condition, it should only be used for making `Trigger`s with that context condition, so it does _not_ implement `BooleanSupplier`.
 - `Trigger` is described above.  It is made by a `Context` from a `BooleanSupplier` and implements `BooleanSupplier`.
 - `Conditions` provides static utility methods for performing logical operations on `BooleanSupplier`s.
-- `CommandOpModes` is part of [command opmodes](opmodes-commandbased.md), and provides some common `Context` instances.
 - `CommandOpMode` is part of [command opmodes](opmodes-commandbased.md) and inherits from `Context`.
 - `CommandGenericHID` is the base class of all command controller classes (described below).
 - Command controller classes (such as `CommandXboxController`) are used to create `Trigger`s associated with a controller's inputs.
@@ -45,11 +44,21 @@ The `Context` class describes when a set of `Trigger`s should be active.
 
 To avoid inadvertently making bindings that are active in more opmodes than expected, `Context`s can only be made from opmodes, or from an opmode type such as all opmodes or all teleop opmodes.
 
-To prevent making `Context`s which can be true regardless of opmode (aside from `CommandOpModes.all` and `Context`s built from it), the only ways to create a `Context` are from the `CommandOpModes` static `Context`s, a `CommandOpMode`, a logical OR of existing `Context`s, and a logical AND of a `Context` with an arbitrary condition.  (Note that allowing a logical OR of a `Context` with an arbitrary condition would defeat this goal.)
+To prevent making `Context`s which can be true regardless of opmode (aside from `Context.all` and `Context`s built from it), the only ways to create a `Context` are from the static `Context`s, a `CommandOpMode`, a logical OR of existing `Context`s, and a logical AND of a `Context` with an arbitrary condition.  (Note that allowing a logical OR of a `Context` with an arbitrary condition would defeat this goal.)
+
+The `Context` class also contains static constants.
 
 ```java
 public class Context {
-  // used by CommandOpMode and the internals of CommandOpModes
+  // always true
+  public static final Context all;
+
+  // true when the given robot mode is selected, regardless of enabled/disabled state
+  public static final Context allAuto;
+  public static final Context allTeleop;
+  public static final Context allTest;
+
+  // used by CommandOpMode and the internals
   protected Context(BooleanSupplier);
 
   // creates a Trigger with the given base condition
@@ -63,27 +72,6 @@ public class Context {
 
 Open question: Should we add `Context.trigger()` and `Context.trigger(EventLoop)` to create `Trigger`s whose context condition is the context and whose base condition is the context being active?  (Note that a constant true base condition would not have any rising or falling edges to trigger Commands.)
 
-## CommandOpModes
-
-In addition to providing the factories described in [command opmodes](opmodes-commandbased.md), the `CommandOpModes` class provides provides static `Context` instances for types of opmodes.  Note that the number of opmodes of a particular type is unbounded\!
-
-```java
-public final class CommandOpModes {
-  // always true
-  public static final Context all;
-
-  // true when the given robot mode is selected, regardless of enabled/disabled state
-  public static final Context allAuto;
-  public static final Context allTeleop;
-  public static final Context allTest;
-
-  // the autonomous(), teleoperated(), and test() CommandOpMode factories still exist
-}
-```
-
-Open question: Are allAuto, allTeleop, and allTest worth defining for users?
-Open question: Should allTeleop be renamed to allTeleoperated to match the CommandOpMode factory?
-
 ## CommandOpMode
 
 In addition to providing the `Trigger`s described in [command opmodes](opmodes-commandbased.md), the `CommandOpMode` class extends `Context`, allowing any opmode to be used wherever a context is expected.  The condition of the `Context` is when the opmode is selected (regardless of enabled/disabled status).
@@ -91,7 +79,7 @@ In addition to providing the `Trigger`s described in [command opmodes](opmodes-c
 Note that the `selected` trigger must have a base condition that has rising and falling edges.
 
 ```java
-public class CommandOpMode extends Context {
+public class CommandOpMode extends Context implements OpMode {
   public final Trigger selected = trigger(...is selected...);
   public final Trigger disabled = selected.and(RobotState::isDisabled);
   public final Trigger enabled = selected.and(RobotState::isEnabled);
@@ -192,18 +180,18 @@ public class Robot extends CommandRobot {
 
   public Robot() {
     // Automatically disable and retract the intake whenever the ball storage is full in any opmode
-    CommandOpModes().any.trigger(storage.hasCargo).onTrue(intake.retractCommand());
+    Context.all.trigger(storage.hasCargo).onTrue(intake.retractCommand());
 
     // Create auto opmodes
-    addSimpleAuto(CommandOpModes.autonomous("Simple Auto"));
+    addSimpleAuto(autonomous("Simple Auto"));
     addPathAuto("drive and turn");
 
     // Create teleop opmodes
-    var arcadeTeleop = CommandOpModes.teleoperated("Arcade Drive");
+    var arcadeTeleop = teleoperated("Arcade Drive");
     addArcadeDriveBindings(arcadeTeleop);
     addIntakeBindings(arcadeTeleop);
 
-    var tankTeleop = CommandOpModes.teleoperated("Tank Drive");
+    var tankTeleop = teleoperated("Tank Drive");
     addTankDriveBindings(tankTeleop);
     addIntakeBindings(tankTeleop);
   }
@@ -215,7 +203,7 @@ public class Robot extends CommandRobot {
 
   private void addPathAuto(String path) {
     // A complex autonomous opmode that loads a path when selected in the DS while still disabled
-    CommandOpMode opmode = CommandOpModes.autonomous(path, "Follow Path");
+    CommandOpMode opmode = autonomous(path, "Follow Path");
     opmode.selected.onTrue(Commands.runOnce(() -> Paths.loadPath(path)));
     opmode.running.whileTrue(Autos.followPath(this, path));
   }

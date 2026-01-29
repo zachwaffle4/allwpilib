@@ -26,12 +26,16 @@ The design for multiple opmodes in the command-based framework extends the curre
 
 A unique `RobotBase` class is also provided that allows users to create command-based OpModes using factory functions. This class extends `OpModeRobot` and uses `OpModeRobot`'s functions for OpMode registration and initialization.
 
+## `Context`s
+
+This design uses the idea of [command contexts](command-contexts.md) to control when triggers are active. As describes in that document, a `CommandOpMode` is a `Context` whose condition is it being selected.
+
 ## CommandOpMode
 
 The `CommandOpMode` class provides triggers to enable users to tie into each section of a opmode's lifetime.  Triggers have the ability to be tied to specific commands or actions on both transitions (e.g. false to true, true to false) and while the condition is in a particular state.  The framework will ensure these triggers always start in false state, even if code is started while attached to the field, so that it's safe to attach an action to the false to true transition of these triggers.
 
 ```java
-public class CommandOpMode implements OpMode {
+public class CommandOpMode extends Context implements OpMode {
   // opmode is selected on DS (regardless of enabled or disabled)
   public final Trigger selected;
 
@@ -53,7 +57,7 @@ The `CommandRobot` class is the base class for the user's command-based `Robot` 
 public class CommandRobot extends OpModeRobot {
   // this is run periodically by all OpModes after the scheduler is run
   public void robotPeriodic() {}
-    
+
   // these are the factory functions for creating opmodes
   // they return CommandOpModes that can be used to tie triggers to opmodes on robot initialization
   // overloads with default values for group, description, and color are also provided
@@ -127,7 +131,7 @@ public class Robot extends CommandRobot {
   @Override
   public void robotPeriodic() {
     // this code is called periodically in all robot modes of operation after the scheduler is run
-      
+
     // run vision processing in preparation for next loop
     vision.process();
 
@@ -174,10 +178,18 @@ public class ArcadeTeleop extends CommandOpMode {
 
 # Drawbacks
 
-The ability to mix command-based and non-command-based opmodes in a single project is a nice feature, but it can potentially be confusing for teams who are not familiar with the command-based framework.
+The ability to mix command-based and non-command-based opmodes in a single project is a nice feature, but it can potentially be confusing for teams who are not familiar with the command-based framework. This is discussed further in the Alternatives section.
 
 # Trades
 
 - Binding teleop joysticks is very verbose if different behavior is desired in different teleop opmodes.  Maybe add to CommandOpMode a separate event loop that's only active in that opmode?  At the minimum, it may make sense to add CommandOpMode overloads to joysticks so users could write `driverController.x(teleop)` instead of `teleop.running.and(driverController.x())`?
 
-# Unresolved Questions
+# Alternatives
+
+## Not Use `OpModeRobot` for Command-Based Opmodes
+
+An alternative to this proposal is to not use `OpModeRobot` as the base class for command-based robots, and instead have a fully separate mechanism to register opmodes in `CommandRobot`. This means opmodes registered with annotations are not registered automatically. This alternative also uses `CommandRobot`'s periodic function to run the command scheduler, meaning that the command scheduler is run in all modes, so making traditional `LinearOpMode` or `PeriodicOpMode` opmodes would be heavily discouraged as the command scheduler would still run. Teams would also be responsible for manually registering those opmodes, as `CommandRobot` would only provide methods to register command-based opmodes.
+
+The goal of that alternative is to separate command-based and non-command-based opmodes by design, though teams can still mix them in the same project by manually creating registration functions (probably by copying what `OpModeRobot` does). Less importantly, that design's version of the `CommandOpMode` class does not actually implement the `OpMode` interface, and the actual `OpMode` implementations are provided by another class. That design makes relatively little sense. Command-based opmodes should be opmodes, and as such they should be able to be used with the rest of the OpMode framework.
+
+The largest advantage of mixing command-based and non-command-based opmodes is it allows for rapid testing of mechanisms, as teams can make opmodes that

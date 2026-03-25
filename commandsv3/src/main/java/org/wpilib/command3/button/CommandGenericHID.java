@@ -6,6 +6,7 @@ package org.wpilib.command3.button;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.wpilib.command3.Context;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.Trigger;
 import org.wpilib.driverstation.DriverStation.POVDirection;
@@ -81,7 +82,7 @@ public class CommandGenericHID {
   public Trigger button(int button, EventLoop loop) {
     var cache = m_buttonCache.computeIfAbsent(loop, k -> new HashMap<>());
     return cache.computeIfAbsent(
-        button, k -> new Trigger(m_scheduler, loop, () -> m_hid.getRawButton(k)));
+        button, k -> new Trigger(m_scheduler, Context.allTeleop, loop, () -> m_hid.getRawButton(k)));
   }
 
   /**
@@ -109,7 +110,7 @@ public class CommandGenericHID {
     // angle.value is a 4 bit bitfield
     return cache.computeIfAbsent(
         pov * 16 + angle.value,
-        k -> new Trigger(m_scheduler, loop, () -> m_hid.getPOV(pov) == angle));
+        k -> new Trigger(m_scheduler, Context.allTeleop, loop, () -> m_hid.getPOV(pov) == angle));
   }
 
   /**
@@ -238,7 +239,7 @@ public class CommandGenericHID {
     var cache = m_axisLessThanCache.computeIfAbsent(loop, k -> new HashMap<>());
     return cache.computeIfAbsent(
         Pair.of(axis, threshold),
-        k -> new Trigger(m_scheduler, loop, () -> getRawAxis(axis) < threshold));
+        k -> new Trigger(m_scheduler, Context.allTeleop, loop, () -> getRawAxis(axis) < threshold));
   }
 
   /**
@@ -268,7 +269,7 @@ public class CommandGenericHID {
     var cache = m_axisGreaterThanCache.computeIfAbsent(loop, k -> new HashMap<>());
     return cache.computeIfAbsent(
         Pair.of(axis, threshold),
-        k -> new Trigger(m_scheduler, loop, () -> getRawAxis(axis) > threshold));
+        k -> new Trigger(m_scheduler, Context.allTeleop, loop, () -> getRawAxis(axis) > threshold));
   }
 
   /**
@@ -285,7 +286,7 @@ public class CommandGenericHID {
     var cache = m_axisMagnitudeGreaterThanCache.computeIfAbsent(loop, k -> new HashMap<>());
     return cache.computeIfAbsent(
         Pair.of(axis, threshold),
-        k -> new Trigger(m_scheduler, loop, () -> Math.abs(getRawAxis(axis)) > threshold));
+        k -> new Trigger(m_scheduler, Context.allTeleop, loop, () -> Math.abs(getRawAxis(axis)) > threshold));
   }
 
   /**

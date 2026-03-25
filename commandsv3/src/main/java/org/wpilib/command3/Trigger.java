@@ -63,6 +63,17 @@ public class Trigger implements BooleanSupplier {
   }
 
   /**
+   * Creates a new trigger based on the given condition. Uses the default scheduler
+   * and is polled by the scheduler's {@link Scheduler#getDefaultEventLoop() default event loop}.
+   *
+   * @param context the context that must be true for edges to be considered
+   * @param condition the condition represented by this trigger
+   */
+  public Trigger(Context context, BooleanSupplier condition) {
+    this(Scheduler.getDefault(), context, condition);
+  }
+
+  /**
    * Creates a new trigger based on the given condition. Polled by the scheduler's {@link
    * Scheduler#getDefaultEventLoop() default event loop}.
    *
@@ -74,28 +85,6 @@ public class Trigger implements BooleanSupplier {
     this(scheduler, context, scheduler.getDefaultEventLoop(), condition);
   }
 
-  /**
-   * Creates a new trigger based on the given condition. Polled by the scheduler's {@link
-   * Scheduler#getDefaultEventLoop() default event loop}. Context defaults to always true.
-   *
-   * @param scheduler The scheduler that should execute triggered commands.
-   * @param condition the condition represented by this trigger
-   */
-  public Trigger(Scheduler scheduler, BooleanSupplier condition) {
-    this(scheduler, Context.all, condition);
-  }
-
-  /**
-   * Creates a new trigger based on the given condition. Triggered commands are executed by the
-   * {@link Scheduler#getDefault() default scheduler}.
-   *
-   * <p>Polled by the default scheduler button loop.
-   *
-   * @param condition the condition represented by this trigger
-   */
-  public Trigger(BooleanSupplier condition) {
-    this(Scheduler.getDefault(), condition);
-  }
 
   /**
    * Creates a new trigger based on the given condition with a context.

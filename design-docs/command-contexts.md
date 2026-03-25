@@ -4,9 +4,9 @@ This document describes how command contexts are implemented in command-based pr
 
 # Motivation
 
-[Command opmodes](opmodes-commandbased.md) will significantly increase the number of command bindings that need to be restricted to particular conditions.  In addition, it should be a conscious decision to make bindings that are active regardless of opmode- Unknowingly doing so can be a major safety risk.
+Command OpModes will significantly increase the number of command bindings that need to be restricted to particular conditions.  In addition, it should be a conscious decision to make bindings that are active regardless of opmode- Unknowingly doing so can be a major safety risk.
 
-This documents proposes a solution to both easily specify restrictions for command bindings and require such restrictions.
+This document proposes a solution to both easily specify restrictions for command bindings and require such restrictions.
 
 # Background
 
@@ -45,7 +45,7 @@ The `Context` class describes when a set of `Trigger`s should be active.
 
 To avoid inadvertently making bindings that are active in more opmodes than expected, `Context`s can only be made from opmodes, or from an opmode type such as all opmodes or all teleop opmodes.
 
-To prevent making `Context`s which can be true regardless of opmode (aside from `CommandOpModes.all` and `Context`s built from it), the only ways to create a `Context` are from the `CommandOpModes` static `Context`s, a `CommandOpMode`, a logical OR of existing `Context`s, and a logical AND of a `Context` with an arbitrary condition.  (Note that allowing a logical OR of a `Context` with an arbitrary condition would defeat this goal.)
+To prevent making `Context`s which can be true regardless of opmode (aside from `Context.all` and `Context`s built from it), the only ways to create a `Context` are from the static `Context`s, a `CommandOpMode`, a logical OR of existing `Context`s, and a logical AND of a `Context` with an arbitrary condition.  (Note that allowing a logical OR of a `Context` with an arbitrary condition would defeat this goal.)
 
 ```java
 public class Context {
@@ -63,12 +63,10 @@ public class Context {
 
 Open question: Should we add `Context.trigger()` and `Context.trigger(EventLoop)` to create `Trigger`s whose context condition is the context and whose base condition is the context being active?  (Note that a constant true base condition would not have any rising or falling edges to trigger Commands.)
 
-## CommandOpModes
-
-In addition to providing the factories described in [command opmodes](opmodes-commandbased.md), the `CommandOpModes` class provides provides static `Context` instances for types of opmodes.  Note that the number of opmodes of a particular type is unbounded\!
+The `Context` also has the following static fields:
 
 ```java
-public final class CommandOpModes {
+public class Context {
   // always true
   public static final Context all;
 
@@ -76,8 +74,6 @@ public final class CommandOpModes {
   public static final Context allAuto;
   public static final Context allTeleop;
   public static final Context allTest;
-
-  // the autonomous(), teleoperated(), and test() CommandOpMode factories still exist
 }
 ```
 
@@ -86,17 +82,19 @@ Open question: Should allTeleop be renamed to allTeleoperated to match the Comma
 
 ## CommandOpMode
 
-In addition to providing the `Trigger`s described in [command opmodes](opmodes-commandbased.md), the `CommandOpMode` class extends `Context`, allowing any opmode to be used wherever a context is expected.  The condition of the `Context` is when the opmode is selected (regardless of enabled/disabled status).
+The `CommandOpMode` class extends `Context`, allowing any opmode to be used wherever a context is expected.  The condition of the `Context` is when the opmode is selected (regardless of enabled/disabled status).
 
 Note that the `selected` trigger must have a base condition that has rising and falling edges.
 
 ```java
-public class CommandOpMode extends Context {
+public class CommandOpMode extends Context implements OpMode {
   public final Trigger selected = trigger(...is selected...);
   public final Trigger disabled = selected.and(RobotState::isDisabled);
   public final Trigger enabled = selected.and(RobotState::isEnabled);
 }
 ```
+
+Other details of `CommandOpMode` will be provided in the CommandOpModes design documentation.
 
 ## Conditions
 
@@ -150,8 +148,8 @@ public class Trigger implements BooleanSupplier {
 }
 ```
 
-Missing detail: How should we resolve combining `Trigger`s with different contexts (or event loops)?
-Missing detail: What should `getAsBoolean()` return when the context condition is false?
+The Trigger created by `Trigger.or` has a context condition that is *both* the context condition of the original `Trigger` and the context condition of the `Trigger` passed to `or`.
+
 Missing detail: Should `onFalse()` schedule the command if the context condition has a falling edge while the base condition is true?
 Missing detail: Should `whileTrue()` cancel the command if the context condition has a falling edge while the base condition is true?
 
@@ -181,77 +179,4 @@ There are two recommended structures for bindings that are common to multiple op
 - Define a method with an opmode parameter that uses that parameter for all contexts, and invoke/call that method for each opmode with the shared bindings.
 - Separate from opmode-specific bindings, make the bindings with the context being a combination of all opmodes with the shared bindings.
 
-## Java robot code example
-
-```java
-public class Robot extends CommandRobot {
-  // actuators (derived from Subsystem)
-  public final Drive drive = new Drive();
-  public final Intake intake = new Intake();
-  public final Storage storage = new Storage();
-
-  public Robot() {
-    // Automatically disable and retract the intake whenever the ball storage is full in any opmode
-    CommandOpModes().any.trigger(storage.hasCargo).onTrue(intake.retractCommand());
-
-    // Create auto opmodes
-    addSimpleAuto(CommandOpModes.autonomous("Simple Auto"));
-    addPathAuto("drive and turn");
-
-    // Create teleop opmodes
-    var arcadeTeleop = CommandOpModes.teleoperated("Arcade Drive");
-    addArcadeDriveBindings(arcadeTeleop);
-    addIntakeBindings(arcadeTeleop);
-
-    var tankTeleop = CommandOpModes.teleoperated("Tank Drive");
-    addTankDriveBindings(tankTeleop);
-    addIntakeBindings(tankTeleop);
-  }
-
-  private void addSimpleAuto(CommandOpMode opmode) {
-    // A simple autonomous opmode
-    opmode.running.whileTrue(Autos.simpleAuto(this));
-  }
-
-  private void addPathAuto(String path) {
-    // A complex autonomous opmode that loads a path when selected in the DS while still disabled
-    CommandOpMode opmode = CommandOpModes.autonomous(path, "Follow Path");
-    opmode.selected.onTrue(Commands.runOnce(() -> Paths.loadPath(path)));
-    opmode.running.whileTrue(Autos.followPath(this, path));
-  }
-
-  private void addIntakeBindings(CommandOpMode opmode) {
-    var codriverController = new CommandXboxController(1, opmode);
-
-    // Deploy the intake with the X button
-    codriverController.x().onTrue(intake.intakeCommand());
-    // Retract the intake with the Y button
-    codriverController.y().onTrue(intake.retractCommand());
-  }
-
-  private void addArcadeDriveBindings(CommandOpMode opmode) {
-    var driverController = new CommandXboxController(0, opmode);
-
-    // Control the drive with split-stick arcade controls
-    drive.setDefaultCommand(
-        opmode,
-        drive.arcadeDriveCommand(
-            () -> -driverController.getLeftY(), () -> -driverController.getRightX()));
-  }
-
-  private void addTankDriveBindings(CommandOpMode opmode) {
-    var driverController = new CommandXboxController(0, opmode);
-
-    // Control the drive with split-stick tank controls
-    drive.setDefaultCommand(
-        opmode,
-        drive.tankDriveCommand(
-            () -> -driverController.getLeftY(), () -> -driverController.getRightY()));
-  }
-}
-
-public class Autos {
-  public static Command simpleAuto(Robot robot) {...}
-  public static Command followPath(Robot robot, String path) {...}
-}
-```
+Robot code examples will be provided in the CommandOpModes design documentation.

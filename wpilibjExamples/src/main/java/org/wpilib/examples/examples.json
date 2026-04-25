@@ -530,5 +530,17 @@
     "gradlebase": "java",
     "commandversion": 2,
     "robotclass": "Robot"
+  },
+  {
+    "name": "DECODE Starter Bot",
+    "description": "A simple robot program for the FTC 2025-2026 DECODE season using the goBILDA Starter Bot.",
+    "tags": [
+      "ExpansionHub",
+      "OpMode"
+    ],
+    "foldername": "decodestarterbot",
+    "gradlebase": "java",
+    "commandversion": 2,
+    "robotclass": "StarterBot"
   }
 ]

@@ -5,7 +5,7 @@ import org.wpilib.driverstation.UserControlsInstance;
 import org.wpilib.framework.OpModeRobot;
 import org.wpilib.hardware.expansionhub.ExpansionHubCRServo;
 import org.wpilib.hardware.expansionhub.ExpansionHubMotor;
-import org.wpilib.system.RobotController;
+import org.wpilib.system.Timer;
 
 /**
  * Main robot class for the StarterBot example. This robot features a differential drive system, a
@@ -38,8 +38,8 @@ public class StarterBot extends OpModeRobot {
       new DifferentialDrive(leftDrive::setThrottle, rightDrive::setThrottle);
 
   private LaunchState launchState = LaunchState.IDLE;
-  private long shotTimerStart = 0;
-  private long feederTimerStart = 0;
+  private final Timer shotTimer = new Timer();
+  private final Timer feederTimer = new Timer();
 
   /** Creates the StarterBot hardware map and applies motor/servo inversion defaults. */
   public StarterBot() {
@@ -80,8 +80,10 @@ public class StarterBot extends OpModeRobot {
   /** Resets launcher-cycle state and feeder output to idle. */
   public void resetLauncherCycle() {
     launchState = LaunchState.IDLE;
-    shotTimerStart = 0;
-    feederTimerStart = 0;
+    shotTimer.stop();
+    shotTimer.reset();
+    feederTimer.stop();
+    feederTimer.reset();
     setFeedersThrottle(StarterBotConstants.STOP_SPEED);
   }
 
@@ -102,7 +104,7 @@ public class StarterBot extends OpModeRobot {
       case IDLE:
         if (shotRequested) {
           launchState = LaunchState.SPIN_UP;
-          shotTimerStart = RobotController.getMonotonicTime();
+          shotTimer.restart();
         }
         break;
       case SPIN_UP:
@@ -110,16 +112,13 @@ public class StarterBot extends OpModeRobot {
         if (launcher.getEncoderVelocity() > StarterBotConstants.LAUNCHER_MIN_VELOCITY) {
           launchState = LaunchState.FEEDING;
           setFeedersThrottle(StarterBotConstants.FULL_SPEED);
-          feederTimerStart = RobotController.getMonotonicTime();
+          feederTimer.restart();
         }
         break;
       case FEEDING:
-        double feederElapsed =
-            (RobotController.getMonotonicTime() - feederTimerStart) / 1_000_000.0;
-        if (feederElapsed > StarterBotConstants.FEED_TIME) {
+        if (feederTimer.hasElapsed(StarterBotConstants.FEED_TIME)) {
           setFeedersThrottle(StarterBotConstants.STOP_SPEED);
-          double shotElapsed = (RobotController.getMonotonicTime() - shotTimerStart) / 1_000_000.0;
-          if (shotElapsed > minCycleSeconds) {
+          if (shotTimer.hasElapsed(minCycleSeconds)) {
             launchState = LaunchState.IDLE;
             return true;
           }

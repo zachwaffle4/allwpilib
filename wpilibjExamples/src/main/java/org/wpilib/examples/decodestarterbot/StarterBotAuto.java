@@ -10,7 +10,7 @@ import org.wpilib.driverstation.MatchState;
 import org.wpilib.opmode.Autonomous;
 import org.wpilib.opmode.PeriodicOpMode;
 import org.wpilib.smartdashboard.SmartDashboard;
-import org.wpilib.system.RobotController;
+import org.wpilib.system.Timer;
 import org.wpilib.units.measure.Angle;
 import org.wpilib.units.measure.Distance;
 
@@ -46,7 +46,7 @@ public class StarterBotAuto extends PeriodicOpMode {
   private double leftTargetPosition = 0;
   private double rightTargetPosition = 0;
   private boolean motionActive = false;
-  private long motionWithinToleranceStart = 0;
+  private final Timer motionHoldTimer = new Timer();
 
   private static final double kMotionToleranceMm = 10;
   private static final double kMotionHoldSeconds = 1.0;
@@ -64,7 +64,8 @@ public class StarterBotAuto extends PeriodicOpMode {
     leftTargetPosition = 0;
     rightTargetPosition = 0;
     motionActive = false;
-    motionWithinToleranceStart = 0;
+    motionHoldTimer.stop();
+    motionHoldTimer.reset();
   }
 
   /** Initializes autonomous state, timers, and mechanism defaults. */
@@ -179,7 +180,8 @@ public class StarterBotAuto extends PeriodicOpMode {
 
   private void beginMotion(double leftTarget, double rightTarget) {
     motionActive = true;
-    motionWithinToleranceStart = 0;
+    motionHoldTimer.stop();
+    motionHoldTimer.reset();
     leftTargetPosition = leftTarget;
     rightTargetPosition = rightTarget;
     robot.setDrivePositionSetpoints(leftTarget, rightTarget);
@@ -195,23 +197,23 @@ public class StarterBotAuto extends PeriodicOpMode {
     double rightError = Math.abs(rightTargetPosition - robot.rightDrive.getEncoderPosition());
 
     if (leftError > toleranceTicks || rightError > toleranceTicks) {
-      motionWithinToleranceStart = 0;
+      motionHoldTimer.stop();
+      motionHoldTimer.reset();
       return false;
     }
 
-    if (motionWithinToleranceStart == 0) {
-      motionWithinToleranceStart = RobotController.getMonotonicTime();
+    if (!motionHoldTimer.isRunning()) {
+      motionHoldTimer.start();
       return false;
     }
 
-    double holdElapsed =
-        (RobotController.getMonotonicTime() - motionWithinToleranceStart) / 1_000_000.0;
-    return holdElapsed > kMotionHoldSeconds;
+    return motionHoldTimer.hasElapsed(kMotionHoldSeconds);
   }
 
   private void clearMotion() {
     motionActive = false;
-    motionWithinToleranceStart = 0;
+    motionHoldTimer.stop();
+    motionHoldTimer.reset();
     leftTargetPosition = 0;
     rightTargetPosition = 0;
   }

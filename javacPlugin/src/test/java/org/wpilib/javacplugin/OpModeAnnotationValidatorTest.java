@@ -15,6 +15,14 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("LineLength") // Inline source code can have long lines
 class OpModeAnnotationValidatorTest {
+  private static final String OPMODE_INTERFACE_SOURCE =
+      """
+      package org.wpilib.opmode;
+
+      public interface OpMode {
+      }
+      """;
+
   private static final String AUTONOMOUS_ANNOTATION_SOURCE =
       """
       package org.wpilib.opmode;
@@ -45,7 +53,7 @@ class OpModeAnnotationValidatorTest {
       }
       """;
 
-  private static final String TEST_OPMODE_ANNOTATION_SOURCE =
+  private static final String UTILITY_ANNOTATION_SOURCE =
       """
       package org.wpilib.opmode;
 
@@ -53,7 +61,7 @@ class OpModeAnnotationValidatorTest {
 
       @Retention(RetentionPolicy.RUNTIME)
       @Target(ElementType.TYPE)
-      public @interface TestOpMode {
+      public @interface Utility {
         String name() default "";
         String description() default "";
         String group() default "";
@@ -70,8 +78,8 @@ class OpModeAnnotationValidatorTest {
 
         @Autonomous(name = "Short Name", description = "Short Description", group = "Short Group")
         @Teleop(name = "Short Name", description = "Short Description", group = "Short Group")
-        @TestOpMode(name = "Short Name", description = "Short Description", group = "Short Group")
-        class Example {
+        @Utility(name = "Short Name", description = "Short Description", group = "Short Group")
+        class Example implements OpMode {
         }
         """;
 
@@ -80,11 +88,13 @@ class OpModeAnnotationValidatorTest {
             .withOptions(kJavaVersionOptions)
             .compile(
                 JavaFileObjects.forSourceString(
+                    "org.wpilib.opmode.OpMode", OPMODE_INTERFACE_SOURCE),
+                JavaFileObjects.forSourceString(
                     "org.wpilib.opmode.Autonomous", AUTONOMOUS_ANNOTATION_SOURCE),
                 JavaFileObjects.forSourceString(
                     "org.wpilib.opmode.Teleop", TELEOP_ANNOTATION_SOURCE),
                 JavaFileObjects.forSourceString(
-                    "org.wpilib.opmode.TestOpMode", TEST_OPMODE_ANNOTATION_SOURCE),
+                    "org.wpilib.opmode.Utility", UTILITY_ANNOTATION_SOURCE),
                 JavaFileObjects.forSourceString("wpilib.robot.Example", source));
 
     assertThat(compilation).succeededWithoutWarnings();
@@ -108,12 +118,12 @@ class OpModeAnnotationValidatorTest {
           description = "This is significantly longer than sixty four characters (it's ninety nine, if you bother to count!)",
           group = "More than twelve characters long"
         )
-        @TestOpMode(
+        @Utility(
           name = "This is much longer than thirty six characters (I counted them all myself)",
           description = "This is significantly longer than sixty four characters (it's ninety nine, if you bother to count!)",
           group = "More than twelve characters long"
         )
-        class Example {
+        class Example implements OpMode {
         }
         """;
 
@@ -122,11 +132,13 @@ class OpModeAnnotationValidatorTest {
             .withOptions(kJavaVersionOptions)
             .compile(
                 JavaFileObjects.forSourceString(
+                    "org.wpilib.opmode.OpMode", OPMODE_INTERFACE_SOURCE),
+                JavaFileObjects.forSourceString(
                     "org.wpilib.opmode.Autonomous", AUTONOMOUS_ANNOTATION_SOURCE),
                 JavaFileObjects.forSourceString(
                     "org.wpilib.opmode.Teleop", TELEOP_ANNOTATION_SOURCE),
                 JavaFileObjects.forSourceString(
-                    "org.wpilib.opmode.TestOpMode", TEST_OPMODE_ANNOTATION_SOURCE),
+                    "org.wpilib.opmode.Utility", UTILITY_ANNOTATION_SOURCE),
                 JavaFileObjects.forSourceString("wpilib.robot.Example", source));
 
     assertThat(compilation).failed();
@@ -153,15 +165,57 @@ class OpModeAnnotationValidatorTest {
         "@Teleop opmode description must be <= 64 characters (was 99)",
         errors.get(5).getMessage(null));
 
-    // TestOpMode
+    // Utility
     assertEquals(
-        "@TestOpMode opmode name must be <= 32 characters (was 74)",
-        errors.get(6).getMessage(null));
+        "@Utility opmode name must be <= 32 characters (was 74)", errors.get(6).getMessage(null));
     assertEquals(
-        "@TestOpMode opmode group must be <= 12 characters (was 32)",
-        errors.get(7).getMessage(null));
+        "@Utility opmode group must be <= 12 characters (was 32)", errors.get(7).getMessage(null));
     assertEquals(
-        "@TestOpMode opmode description must be <= 64 characters (was 99)",
+        "@Utility opmode description must be <= 64 characters (was 99)",
         errors.get(8).getMessage(null));
+  }
+
+  @Test
+  void annotatedClassNotImplementingOpModeFailsToCompile() {
+    String source =
+        """
+        package wpilib.robot;
+
+        import org.wpilib.opmode.*;
+
+        @Autonomous
+        @Teleop
+        @Utility
+        class Example {
+        }
+        """;
+
+    Compilation compilation =
+        javac()
+            .withOptions(kJavaVersionOptions)
+            .compile(
+                JavaFileObjects.forSourceString(
+                    "org.wpilib.opmode.OpMode", OPMODE_INTERFACE_SOURCE),
+                JavaFileObjects.forSourceString(
+                    "org.wpilib.opmode.Autonomous", AUTONOMOUS_ANNOTATION_SOURCE),
+                JavaFileObjects.forSourceString(
+                    "org.wpilib.opmode.Teleop", TELEOP_ANNOTATION_SOURCE),
+                JavaFileObjects.forSourceString(
+                    "org.wpilib.opmode.Utility", UTILITY_ANNOTATION_SOURCE),
+                JavaFileObjects.forSourceString("wpilib.robot.Example", source));
+
+    assertThat(compilation).failed();
+    var errors = compilation.errors();
+    assertEquals(3, errors.size());
+
+    assertEquals(
+        "@Autonomous can only be applied to a class that implements OpMode",
+        errors.get(0).getMessage(null));
+    assertEquals(
+        "@Teleop can only be applied to a class that implements OpMode",
+        errors.get(1).getMessage(null));
+    assertEquals(
+        "@Utility can only be applied to a class that implements OpMode",
+        errors.get(2).getMessage(null));
   }
 }

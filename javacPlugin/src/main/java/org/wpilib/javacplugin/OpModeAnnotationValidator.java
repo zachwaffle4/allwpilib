@@ -46,6 +46,18 @@ public class OpModeAnnotationValidator implements TaskListener {
   /** The maximum number of permitted characters for an opmode description. */
   private static final int DESCRIPTION_MAX_LENGTH = 64;
 
+  /** The fully qualified name of the {@code OpMode} interface. */
+  private static final String OPMODE_QNAME = "org.wpilib.opmode.OpMode";
+
+  /** The fully qualified name of the {@code Autonomous} annotation. */
+  private static final String AUTONOMOUS_QNAME = "org.wpilib.opmode.Autonomous";
+
+  /** The fully qualified name of the {@code Teleop} annotation. */
+  private static final String TELEOP_QNAME = "org.wpilib.opmode.Teleop";
+
+  /** The fully qualified name of the {@code Utility} annotation. */
+  private static final String UTILITY_QNAME = "org.wpilib.opmode.Utility";
+
   public OpModeAnnotationValidator(JavacTask task) {
     m_task = task;
   }
@@ -81,13 +93,15 @@ public class OpModeAnnotationValidator implements TaskListener {
       }
 
       CharSequence qname = typeElem.getQualifiedName();
-      boolean isAutonomous = "org.wpilib.opmode.Autonomous".contentEquals(qname);
-      boolean isTeleop = "org.wpilib.opmode.Teleop".contentEquals(qname);
-      boolean isTestOpMode = "org.wpilib.opmode.TestOpMode".contentEquals(qname);
+      boolean isAutonomous = AUTONOMOUS_QNAME.contentEquals(qname);
+      boolean isTeleop = TELEOP_QNAME.contentEquals(qname);
+      boolean isUtility = UTILITY_QNAME.contentEquals(qname);
 
-      if (!(isAutonomous || isTeleop || isTestOpMode)) {
+      if (!(isAutonomous || isTeleop || isUtility)) {
         return super.visitAnnotation(node, unused);
       }
+
+      checkImplementsOpMode(typeElem.getSimpleName(), node);
 
       // Extract provided attributes (they are optional). Only check name, group, description
       ExpressionTree nameExpr = null;
@@ -116,6 +130,43 @@ public class OpModeAnnotationValidator implements TaskListener {
       checkLength(typeElem.getSimpleName(), "description", DESCRIPTION_MAX_LENGTH, descriptionExpr);
 
       return super.visitAnnotation(node, unused);
+    }
+
+    private void checkImplementsOpMode(CharSequence annoName, AnnotationTree node) {
+      TypeElement annotatedType = findAnnotatedType(node);
+      if (annotatedType == null) {
+        // Couldn't resolve the annotated declaration; nothing to check
+        return;
+      }
+
+      TypeElement opModeElement = m_task.getElements().getTypeElement(OPMODE_QNAME);
+      if (opModeElement == null) {
+        // OpMode isn't resolvable on the classpath; don't produce a false positive
+        return;
+      }
+
+      if (!m_task.getTypes().isAssignable(annotatedType.asType(), opModeElement.asType())) {
+        m_trees.printMessage(
+            Diagnostic.Kind.ERROR,
+            "@%s can only be applied to a class that implements OpMode".formatted(annoName),
+            node,
+            m_root);
+      }
+    }
+
+    private TypeElement findAnnotatedType(AnnotationTree node) {
+      TreePath annoPath = m_trees.getPath(m_root, node);
+      if (annoPath == null) {
+        return null;
+      }
+
+      // The annotation's grandparent tree is the annotated declaration (the parent is its
+      // ModifiersTree). ElementType.TYPE restricts annotated declarations to classes,
+      // interfaces, enums, and records, all of which resolve to a TypeElement.
+      TreePath modifiersPath = annoPath.getParentPath();
+      TreePath declPath = modifiersPath != null ? modifiersPath.getParentPath() : null;
+      Element el = declPath != null ? m_trees.getElement(declPath) : null;
+      return el instanceof TypeElement typeElement ? typeElement : null;
     }
 
     private void checkLength(

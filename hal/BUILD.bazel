@@ -153,6 +153,13 @@ cc_test(
 wpilib_java_junit5_test(
     name = "hal-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/wpiHaljni",
+        "//datalog:shared/datalogjni",
+        "//ntcore:shared/ntcorejni",
+        "//wpinet:shared/wpinetjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":hal-java",
     ],

@@ -154,6 +154,11 @@ cc_test(
 wpilib_java_junit5_test(
     name = "apriltag-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/apriltagjni",
+        "//wpimath:shared/wpimathjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     resource_strip_prefix = "apriltag/src/test/resources",
     resources = glob(["src/test/resources/**"]),
     deps = [

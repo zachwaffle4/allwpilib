@@ -150,6 +150,14 @@ cc_test(
 wpilib_java_junit5_test(
     name = "drivers-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        "//hal:shared/wpiHaljni",
+        "//datalog:shared/datalogjni",
+        "//ntcore:shared/ntcorejni",
+        "//wpimath:shared/wpimathjni",
+        "//wpinet:shared/wpinetjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":drivers-java",
         "//hal:hal-java",

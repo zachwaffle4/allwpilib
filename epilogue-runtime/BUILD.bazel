@@ -18,6 +18,10 @@ wpilib_java_library(
 wpilib_java_junit5_test(
     name = "epilogue-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        "//wpimath:shared/wpimathjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":epilogue-java",
         "//wpimath:wpimath-java",

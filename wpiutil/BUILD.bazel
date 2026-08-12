@@ -300,6 +300,9 @@ cc_test(
 wpilib_java_junit5_test(
     name = "wpiutil-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/wpiutiljni",
+    ],
     deps = [
         ":wpiutil-java",
     ],

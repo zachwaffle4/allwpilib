@@ -156,6 +156,10 @@ cc_test(
 wpilib_java_junit5_test(
     name = "datalog-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/datalogjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     tags = ["exclusive"],
     deps = [
         ":datalog-java",

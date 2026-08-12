@@ -296,6 +296,10 @@ cc_test(
 wpilib_java_junit5_test(
     name = "wpimath-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/wpimathjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":wpimath-java",
         "//wpiunits:wpiunits-java",

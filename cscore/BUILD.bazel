@@ -233,6 +233,10 @@ cc_test(
 wpilib_java_junit5_test(
     name = "cscore-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/cscorejni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":cscore-java",
         "//wpiutil:wpiutil-java",

@@ -263,6 +263,10 @@ pkg_files(
 wpilib_java_junit5_test(
     name = "fields-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        "//wpimath:shared/wpimathjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     resources = glob(["src/test/resources/**"]),
     deps = [
         ":fields-java",

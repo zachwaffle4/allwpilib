@@ -284,6 +284,10 @@ cc_test(
 wpilib_java_junit5_test(
     name = "wpinet-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/wpinetjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":wpinet-java",
     ],

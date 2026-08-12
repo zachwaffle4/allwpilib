@@ -112,6 +112,13 @@ wpilib_java_junit5_test(
     ]),
     resource_strip_prefix = "wpilibj/src/test/resources",
     resources = glob(["src/test/resources/**"]),
+    native_libs = [
+        "//hal:shared/wpiHaljni",
+        "//ntcore:shared/ntcorejni",
+        "//wpimath:shared/wpimathjni",
+        "//wpinet:shared/wpinetjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":wpilibj-java",
         "//hal:hal-java",

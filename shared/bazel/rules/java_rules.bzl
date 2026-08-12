@@ -1,4 +1,5 @@
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_java//java:defs.bzl", "java_library", "java_test")
 load("//shared/bazel/rules:packaging.bzl", "zip_java_srcs")
 load("//shared/bazel/rules:publishing.bzl", "wpilib_maven_export")
 
@@ -34,12 +35,26 @@ def wpilib_java_junit5_test(
         name,
         deps = [],
         runtime_deps = [],
+        native_libs = [],
+        data = [],
+        jvm_flags = [],
         args = [],
         tags = [],
-        package = "edu",
+        package = "org",
         **kwargs):
     """
     Convenience helper to make a junit5 test
+
+    native_libs is a list of native shared library targets (e.g. the
+    wpilib_cc_shared_library JNI target for a library under test) to put on
+    java.library.path so RuntimeLoader.loadLibrary can find them.
+
+    cc_shared_library doesn't expose the CcInfo that java_test's automatic
+    java.library.path detection relies on, so the directories are computed
+    here from the labels and passed via an explicit jvm_flag instead. This
+    relies on ${JAVA_RUNFILES} being set by the java stub script and the main
+    repo's runfiles directory being named "_main", matching what java_test
+    itself would generate for a CcInfo-bearing runtime dep.
     """
     junit_deps = [
         "@maven//:org_junit_jupiter_junit_jupiter_api",
@@ -51,11 +66,30 @@ def wpilib_java_junit5_test(
         "@maven//:org_junit_platform_junit_platform_console",
     ]
 
-    # TODO - replace with java_test once shared libraries are hooked up.
-    java_binary(
+    native_lib_dirs = []
+    for lib in native_libs:
+        label = native.package_relative_label(lib)
+        subdir = paths.dirname(label.name)
+        lib_dir = label.package + "/" + subdir if subdir else label.package
+        if lib_dir not in native_lib_dirs:
+            native_lib_dirs.append(lib_dir)
+
+    if native_lib_dirs:
+        jvm_flags = jvm_flags + [
+            "-Djava.library.path=" + ":".join(
+                ["$${{JAVA_RUNFILES}}/_main/{}".format(d) for d in native_lib_dirs],
+            ),
+        ]
+
+    java_test(
         name = name,
         deps = deps + junit_deps,
+        data = data + native_libs,
         runtime_deps = runtime_deps + junit_runtime_deps,
+        jvm_flags = jvm_flags + [
+            "-ea",
+            "--enable-native-access=ALL-UNNAMED",
+        ],
         args = args + ["--select-package", package],
         main_class = "org.junit.platform.console.ConsoleLauncher",
         use_testrunner = False,

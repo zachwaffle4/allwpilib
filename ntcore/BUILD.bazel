@@ -201,6 +201,11 @@ cc_test(
 wpilib_java_junit5_test(
     name = "ntcore-java-test",
     srcs = glob(["src/test/java/**/*.java"]),
+    native_libs = [
+        ":shared/ntcorejni",
+        "//datalog:shared/datalogjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     tags = ["exclusive"],
     deps = [
         ":ntcore-java",

@@ -149,6 +149,14 @@ wpilib_java_junit5_test(
     srcs = glob(["src/test/java/**/*.java"]),
     resource_strip_prefix = "commandsv2/src/test/resources",
     resources = glob(["src/test/resources/**"]),
+    native_libs = [
+        "//hal:shared/wpiHaljni",
+        "//datalog:shared/datalogjni",
+        "//ntcore:shared/ntcorejni",
+        "//wpimath:shared/wpimathjni",
+        "//wpinet:shared/wpinetjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     deps = [
         ":commandsv2-java",
         "//hal:hal-java",

@@ -12,9 +12,11 @@ import java.lang.reflect.Modifier;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -89,6 +91,7 @@ public abstract class OpModeRobot extends RobotBase {
   private final Alert m_loopOverrunAlert;
   private final Watchdog m_opModeWatchdog;
   private final Alert m_opModePeriodicOverrunAlert;
+  private final List<Listener> m_listeners = new ArrayList<>();
 
   private static void reportAddOpModeError(Class<?> cls, String message) {
     DriverStationErrors.reportError(
@@ -595,6 +598,14 @@ public abstract class OpModeRobot extends RobotBase {
     m_callbacks.add(callback, m_startTimeNs, period, offset);
   }
 
+  public void registerListener(Listener listener) {
+    m_listeners.add(listener);
+  }
+
+  public void removeListener(Listener listener) {
+    m_listeners.remove(listener);
+  }
+
   /**
    * Get the period at which robot and opmode periodic callbacks are run.
    *
@@ -689,6 +700,8 @@ public abstract class OpModeRobot extends RobotBase {
             m_currentOpMode.disabledPeriodic();
             m_watchdog.addEpoch("OpMode::DisabledPeriodic()");
           }
+          m_listeners.forEach(
+              listener -> listener.onOpModeSelect(m_currentOpModeName, m_currentOpMode));
         }
       } else {
         DriverStationErrors.reportError("No OpMode found for mode " + modeId, false);
@@ -782,6 +795,8 @@ public abstract class OpModeRobot extends RobotBase {
 
     m_currentOpMode.start();
     m_watchdog.addEpoch("opMode.start()");
+
+    m_listeners.forEach(listener -> listener.onOpModeStart(m_currentOpModeName, m_currentOpMode));
   }
 
   private void runOpModePeriodic(OpMode opMode) {
@@ -798,6 +813,10 @@ public abstract class OpModeRobot extends RobotBase {
     if (m_currentOpModePeriodic != null) {
       System.out.println("********** Ending OpMode " + m_currentOpModeName + " **********");
 
+      m_listeners
+          .reversed()
+          .forEach(listener -> listener.onOpModeStop(m_currentOpModeName, m_currentOpMode));
+
       m_currentOpMode.end();
       m_watchdog.addEpoch("opMode.end()");
 
@@ -810,6 +829,10 @@ public abstract class OpModeRobot extends RobotBase {
     // while disabled), so always remove them regardless of whether the opmode was started.
     m_callbacks.removeAll(m_activeOpModeCallbacks);
     m_activeOpModeCallbacks.clear();
+
+    m_listeners
+        .reversed()
+        .forEach(listener -> listener.onOpModeClose(m_currentOpModeName, m_currentOpMode));
 
     // regardless of whether opmode was started, close it and set to null
     System.out.println("********** Closing OpMode " + m_currentOpModeName + " **********");
@@ -854,5 +877,15 @@ public abstract class OpModeRobot extends RobotBase {
   /** Prints list of epochs added so far and their times. */
   public void printWatchdogEpochs() {
     m_watchdog.printEpochs();
+  }
+
+  public interface Listener {
+    default void onOpModeSelect(String opModeName, OpMode opMode) {}
+
+    default void onOpModeStart(String opModeName, OpMode opMode) {}
+
+    default void onOpModeStop(String opModeName, OpMode opMode) {}
+
+    default void onOpModeClose(String opModeName, OpMode opMode) {}
   }
 }

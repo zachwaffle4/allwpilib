@@ -36,6 +36,7 @@ import org.wpilib.internal.PeriodicPriorityQueue.Callback;
 import org.wpilib.networktables.NetworkTableInstance;
 import org.wpilib.opmode.Autonomous;
 import org.wpilib.opmode.OpMode;
+import org.wpilib.opmode.OpModeListener;
 import org.wpilib.opmode.PeriodicOpMode;
 import org.wpilib.opmode.Teleop;
 import org.wpilib.opmode.Utility;
@@ -91,7 +92,7 @@ public abstract class OpModeRobot extends RobotBase {
   private final Alert m_loopOverrunAlert;
   private final Watchdog m_opModeWatchdog;
   private final Alert m_opModePeriodicOverrunAlert;
-  private final List<Listener> m_listeners = new ArrayList<>();
+  private final List<OpModeListener> m_listeners = new ArrayList<>();
 
   private static void reportAddOpModeError(Class<?> cls, String message) {
     DriverStationErrors.reportError(
@@ -598,11 +599,24 @@ public abstract class OpModeRobot extends RobotBase {
     m_callbacks.add(callback, m_startTimeNs, period, offset);
   }
 
-  public void registerListener(Listener listener) {
+  /**
+   * Register a listener to be notified of opmode lifecycle events.
+   *
+   * <p>Select and start events are delivered in registration order; stop and close events are
+   * delivered in reverse registration order.
+   *
+   * @param listener The listener to register.
+   */
+  public void registerListener(OpModeListener listener) {
     m_listeners.add(listener);
   }
 
-  public void removeListener(Listener listener) {
+  /**
+   * Remove a previously registered listener. Does nothing if the listener is not registered.
+   *
+   * @param listener The listener to remove.
+   */
+  public void removeListener(OpModeListener listener) {
     m_listeners.remove(listener);
   }
 
@@ -877,15 +891,5 @@ public abstract class OpModeRobot extends RobotBase {
   /** Prints list of epochs added so far and their times. */
   public void printWatchdogEpochs() {
     m_watchdog.printEpochs();
-  }
-
-  public interface Listener {
-    default void onOpModeSelect(String opModeName, OpMode opMode) {}
-
-    default void onOpModeStart(String opModeName, OpMode opMode) {}
-
-    default void onOpModeStop(String opModeName, OpMode opMode) {}
-
-    default void onOpModeClose(String opModeName, OpMode opMode) {}
   }
 }

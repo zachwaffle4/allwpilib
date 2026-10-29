@@ -22,6 +22,7 @@ import org.wpilib.driverstation.internal.DriverStationBackend;
 import org.wpilib.hardware.hal.OpModeOption;
 import org.wpilib.hardware.hal.RobotMode;
 import org.wpilib.opmode.OpMode;
+import org.wpilib.opmode.OpModeListener;
 import org.wpilib.simulation.DriverStationSim;
 import org.wpilib.simulation.SimHooks;
 import org.wpilib.util.Color;
@@ -517,9 +518,9 @@ class OpModeRobotTest {
     robot.close();
   }
 
-  /** Listener that appends "<tag>:<event>:<opModeName>" to a shared log. */
-  private static OpModeRobot.Listener loggingListener(String tag, List<String> log) {
-    return new OpModeRobot.Listener() {
+  /** Listener that appends {@code "<tag>:<event>:<opModeName>"} to a shared log. */
+  private static OpModeListener loggingListener(String tag, List<String> log) {
+    return new OpModeListener() {
       @Override
       public void onOpModeSelect(String opModeName, OpMode opMode) {
         log.add(tag + ":select:" + opModeName);
@@ -628,7 +629,7 @@ class OpModeRobotTest {
     MockRobot robot = new MockRobot();
     robot.addOpMode(RobotMode.TELEOPERATED, "TestOpMode", MockOpMode::new);
     robot.publishOpModes();
-    OpModeRobot.Listener removed = loggingListener("removed", log);
+    OpModeListener removed = loggingListener("removed", log);
     robot.registerListener(removed);
     robot.registerListener(loggingListener("kept", log));
     robot.removeListener(removed);

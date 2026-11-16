@@ -3,6 +3,12 @@ load("//shared/bazel/rules:java_rules.bzl", "wpilib_java_junit5_test")
 wpilib_java_junit5_test(
     name = "java",
     srcs = glob(["**/*.java"]),
+    native_libs = [
+        "//apriltag:shared/apriltagjni",
+        "@bzlmodrio-opencv//libraries/cpp/opencv:jni",
+        "//wpimath:shared/wpimathjni",
+        "//wpiutil:shared/wpiutiljni",
+    ],
     resource_strip_prefix = "apriltag/src/test/resources",
     resources = ["//apriltag:test-resources"],
     deps = [

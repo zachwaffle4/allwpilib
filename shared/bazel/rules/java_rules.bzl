@@ -1,4 +1,5 @@
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary", "java_library", "java_test")
+load("//shared/bazel/rules:native_libs.bzl", "wpilib_native_lib_dir")
 load("//shared/bazel/rules:packaging.bzl", "zip_java_srcs")
 load("//shared/bazel/rules:publishing.bzl", "wpilib_maven_export")
 
@@ -59,11 +60,35 @@ def wpilib_java_junit5_test(
         runtime_deps = [],
         args = [],
         tags = [],
-        package = "edu",
+        package = "org.wpilib",
+        native_libs = [],
+        jvm_flags = [],
         **kwargs):
     """
     Convenience helper to make a junit5 test
+
+    Args:
+      native_libs: cc_shared_library targets (typically JNI libraries) the test
+                   needs at runtime. They are staged into a single directory
+                   that is put on java.library.path.
     """
+    data = list(kwargs.pop("data", []))
+    jvm_flags = list(jvm_flags)
+
+    if native_libs:
+        natives_name = name + "_natives"
+        wpilib_native_lib_dir(
+            name = natives_name,
+            libs = native_libs,
+            testonly = True,
+        )
+        data.append(":" + natives_name)
+
+        # Tests run with the main repo's runfiles directory as their working
+        # directory on every platform, so a package-relative path works
+        # without relying on shell-only variables like JAVA_RUNFILES.
+        jvm_flags.append("-Djava.library.path=" + native.package_name() + "/" + natives_name)
+
     junit_deps = [
         "@maven//:org_junit_jupiter_junit_jupiter_api",
         "@maven//:org_junit_jupiter_junit_jupiter_params",
@@ -75,11 +100,13 @@ def wpilib_java_junit5_test(
     ]
 
     # TODO - replace with java_test once shared libraries are hooked up.
-    java_binary(
+    java_test(
         name = name,
         deps = deps + junit_deps,
         runtime_deps = runtime_deps + junit_runtime_deps,
         args = args + ["--select-package", package],
+        data = data,
+        jvm_flags = jvm_flags,
         main_class = "org.junit.platform.console.ConsoleLauncher",
         use_testrunner = False,
         testonly = True,

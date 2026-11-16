@@ -146,6 +146,10 @@ build --@rules_python//python/config_settings:bootstrap_impl=script
 # rules_python bzlmod names are too long on Windows.
 build:windows --@rules_python//python/config_settings:venvs_site_packages=yes
 
+# Java tests put a runfiles-relative directory on java.library.path, which
+# needs a real runfiles tree (off by default on Windows).
+build:windows --enable_runfiles
+
 # AOS has both aos/flatbuffers/ and aos/flatbuffers.py; without this Bazel
 # synthesizes an aos/flatbuffers/__init__.py that shadows the module.
 build --incompatible_default_to_explicit_init_py

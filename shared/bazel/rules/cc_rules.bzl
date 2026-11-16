@@ -394,6 +394,15 @@ def wpilib_cc_shared_library(
     if auto_export_windows_symbols:
         features.append("windows_export_all_symbols")
 
+    # Let the library find its dynamic deps when they sit next to it (e.g. the
+    # flat directory staged for java.library.path), not just in the
+    # bazel-generated _solib layout.
+    user_link_flags = (user_link_flags or []) + select({
+        "@platforms//os:linux": ["-Wl,-rpath,$$ORIGIN"],
+        "@platforms//os:osx": ["-Wl,-rpath,@loader_path"],
+        "//conditions:default": [],
+    })
+
     if use_debug_name:
         user_link_flags = (user_link_flags or []) + select({
             "//shared/bazel/rules:linux_compilation_mode_dbg": ["-Wl,-soname,lib" + lib + "d.so"],
